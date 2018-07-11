@@ -80,11 +80,11 @@ for (int m = 0; m < EbN0dB.length(); m++) {
     //Modulate the bits to QPSK symbols:
     cvec transmitted_symbols = qpsk.modulate_bits(transmitted_bits);
     //Set the noise variance of the AWGN channel:
-               // awgn_channel.set_noise(N0(i));
+       awgn_channel.set_noise(N0(i));
     //Run the transmited symbols through the channel using the () operator:
-               cvec received_symbols = awgn_channel(transmitted_symbols);
+               //cvec received_symbols = awgn_channel(transmitted_symbols);
     //Demodulate the received QPSK symbols into received bits:
-    bvec received_bits = qpsk.demodulate_bits(received_symbols);
+  //  bvec received_bits = qpsk.demodulate_bits(received_symbols);
     //Calculate the bit error rate:
     berc.clear();                               //Clear the bit error rate counter
     berc.count(transmitted_bits, received_bits); //Count the bit errors
@@ -92,32 +92,40 @@ for (int m = 0; m < EbN0dB.length(); m++) {
 
 }
 
-vector < vector < vector< complex<double> > > > Beta;
+vector< vector < vector < vector< complex<double> > > > > Beta;
   for(int p = 0; p <i; p++)
   {
-    vector < vector < complex<double> > > w;
+    vector <vector< vector < complex<double> > > > w;
     Beta.push_back( w );
     for(int q = 0; q < k; q++)
     {
-      vector< complex<double> > v;
+      vector< vector < complex<double> > > v;
       Beta[p].push_back( v );
       for(int r = 0; r < l; r++)
      {   
+	vector< complex<double> >  y;
+      	Beta[p][q].push_back( y );
 
-   vec cbuff = randn(No_of_bits) ;
-
-           std::complex<double> mycomplex (1,2);
-           mycomplex= mycomplex*1/sqrt(2);
-        Beta[p][q].push_back(mycomplex);
+   	vec cbuff = randn(No_of_bits) ;
+	for(int b=0; b < No_of_bits; b++)
+	{
+	   std::complex<double> mycomplex (cbuff[b],cbuff[b]);
+	   mycomplex= mycomplex*1/sqrt(2);
+	   Beta[p][q][r].push_back(mycomplex);
+	}
       }
     }
   }
 
+//for h*x cvec
   for (size_t p = 0; p < Beta.size(); p++)
     for (size_t q = 0; q < Beta[p].size(); q++)
       for (size_t r = 0; r < Beta[p][q].size(); r++)
-        cout << "Beta[" << p<< "][" << q << "][" << r << "] = " << Beta[p][q][r] << endl;  
-cout<<No_of_bits<<endl ;
+	for (size_t b = 0; b < Beta[p][q][r].size(); b++)
+		//cvec received_symbols[b] = Beta[p][q][r][b]*transmitted_symbols[b] ;
+
+     //   cout << "Beta[" << p<< "][" << q << "][" << r << "][" << b << "] = " << Beta[p][q][r][b] << endl; 
+	
 }
 private:
 	int i, k, l ;
