@@ -10,13 +10,14 @@
 using namespace itpp;
 using namespace std;
 
-extern int No_of_bits = 10000 ;
-extern double Ec, Eb;
-extern vec EbN0dB, EbN0, N0, noise_variance, bit_error_rate; //vec is a vector containing double
-extern bvec transmitted_bits, received_bits;                 //bvec is a vector containing bits
-extern 	cvec transmitted_symbols, received_symbols, buff;           //cvec is a vector containing double_complex
-
- 
+int No_of_bits = 10000 ;
+double Ec, Eb;
+vec EbN0dB, EbN0, N0, noise_variance, bit_error_rate; //vec is a vector containing double
+bvec transmitted_bits, received_bits, rxbits;                 //bvec is a vector containing bits
+cvec transmitted_symbols(5000),  cbuff, noise;           //cvec is a vector containing double_complex
+cvec buff, cnoise ;
+std::complex<double> received_symbols[10][5][10][5000];
+std::complex<double> rxnoise_symbols[10][5][10][5000];
 
 class Mobile
 {
@@ -61,9 +62,13 @@ void Betav(void)
   Real_Timer tt;                 //The timer used to measure the execution time
   
 
+  //Reset and start the timer:
+  tt.tic();
+  //Init:
+
  double Ec = 1.0;                      //The transmitted energy per QPSK symbol is 1.
   double Eb = Ec / 2.0;                 //The transmitted energy per bit is 0.5.
-  vec EbN0dB = linspace(0.0, 30.0, 10); //Simulate for 10 Eb/N0 values from 0 to 30 dB.
+  vec EbN0dB = linspace(0.0, 30.0, 11); //Simulate for 10 Eb/N0 values from 0 to 30 dB.
   vec EbN0 = inv_dB(EbN0dB);         //Calculate Eb/N0 in a linear scale instead of dB.
   vec N0 = Eb * pow(EbN0, -1.0);     //N0 is the variance of the (complex valued) noise.
   vec bit_error_rate;
@@ -73,24 +78,21 @@ void Betav(void)
 
 for (int m = 0; m < EbN0dB.length(); m++) {
     //Show how the simulation progresses:
-    cout << "Now simulating Eb/N0 value number " << m + 1 << " of " << EbN0dB.length() << endl;
+    //cout << "Now simulating Eb/N0 value number " << m + 1 << " of " << EbN0dB.length() << endl;
     //Generate	 a vector of random bits to transmit:
-    bvec transmitted_bits = randb(No_of_bits);
+    transmitted_bits = randb(No_of_bits);
 
     //Modulate the bits to QPSK symbols:
-    cvec transmitted_symbols = qpsk.modulate_bits(transmitted_bits);
+    transmitted_symbols = qpsk.modulate_bits(transmitted_bits);
+
     //Set the noise variance of the AWGN channel:
        awgn_channel.set_noise(N0(i));
     //Run the transmited symbols through the channel using the () operator:
                //cvec received_symbols = awgn_channel(transmitted_symbols);
     //Demodulate the received QPSK symbols into received bits:
-  //  bvec received_bits = qpsk.demodulate_bits(received_symbols);
+  //  bvec 
     //Calculate the bit error rate:
-    berc.clear();                               //Clear the bit error rate counter
-    berc.count(transmitted_bits, received_bits); //Count the bit errors
-    bit_error_rate(i) = berc.get_errorrate();   //Save the estimated BER in the result vector
-
-}
+   
 
 vector< vector < vector < vector< complex<double> > > > > Beta;
   for(int p = 0; p <i; p++)
@@ -106,26 +108,104 @@ vector< vector < vector < vector< complex<double> > > > > Beta;
 	vector< complex<double> >  y;
       	Beta[p][q].push_back( y );
 
-   	vec cbuff = randn(No_of_bits) ;
+        // vec c1buff = randn(No_of_bits) ;
+	 cbuff = randn_c(No_of_bits);
 	for(int b=0; b < No_of_bits; b++)
 	{
-	   std::complex<double> mycomplex (cbuff[b],cbuff[b]);
-	   mycomplex= mycomplex*1/sqrt(2);
-	   Beta[p][q][r].push_back(mycomplex);
+	   //std::complex<double> mycomplex (c1buff[b],c1buff[b]);
+	   //mycomplex= mycomplex*1/sqrt(2);
+           Beta[p][q][r].push_back(cbuff[b]);
+
+          
 	}
       }
     }
   }
 
-//for h*x cvec
-  for (size_t p = 0; p < Beta.size(); p++)
-    for (size_t q = 0; q < Beta[p].size(); q++)
-      for (size_t r = 0; r < Beta[p][q].size(); r++)
-	for (size_t b = 0; b < Beta[p][q][r].size(); b++)
-		//cvec received_symbols[b] = Beta[p][q][r][b]*transmitted_symbols[b] ;
 
-     //   cout << "Beta[" << p<< "][" << q << "][" << r << "][" << b << "] = " << Beta[p][q][r][b] << endl; 
-	
+
+
+
+//for h*x cvec
+  for (int p = 0; p < Beta.size(); p++)
+{
+    for (int q = 0; q < Beta[p].size(); q++)
+{
+      for ( int r = 0; r < Beta[p][q].size(); r++)
+{
+buff.clear() ;
+
+	for (int b = 0; b < transmitted_symbols.size(); b++)
+{
+		received_symbols[p][q][r][b] =  Beta[p][q][r][b]*transmitted_symbols[b] ;
+ 		buff.ins(b, 10);
+		//cout << "Beta[" << p << "][" << q << "][" << r << "][" << b << "] = " << Beta[p][q][r][b] << endl; 
+
+}
+
+//received_bits = qpsk.demodulate_bits(received_symbols[p][q][r][]);
+noise = awgn_channel(buff);
+     
+
+//cout<<noise.size()<<endl ;
+	for (int b = 0; b < transmitted_symbols.size(); b++)
+{
+		rxnoise_symbols[p][q][r][b] = noise[b] ;
+		//cout << "Beta[" << p << "][" << q << "][" << r << "][" << b << "] = " << rxnoise_symbols[p][q][r][b] << endl; 
+
+
+}
+
+
+//if((p==1)&&(q==0)&&(r=1))
+//{
+for (int b = 0; b < transmitted_symbols.size(); b++)
+{
+cnoise.ins(b, rxnoise_symbols[1][0][1][b]);
+//cout<< noise <<endl ;
+//cout<<"rxnoise"<<rxnoise_symbols[1][0][1][4999]<<endl;
+}
+//}
+received_bits = qpsk.demodulate_bits(noise);
+//cout<<received_bits<<endl ;
+noise.clear() ;
+}
+}
+}
+
+//cout<< received_symbols[p][q][r][b]<<endl;
+//cout<<transmitted_symbols[4888]<<endl ;
+//cout<<Beta[6][0][6][4888]<<endl ;
+/*
+for(int b = 0; b < 39 ; b++)
+{
+    rxbits[b] = received_bits[b];
+}
+*/
+cout<<received_bits.size()<<endl;
+
+    berc.clear();                               //Clear the bit error rate counter
+    berc.count(transmitted_bits, received_bits); //Count the bit errors
+    bit_error_rate(i) = berc.get_errorrate();   //Save the estimated BER in the result vector
+
+
+}
+
+tt.toc();
+  //Print the results:
+  cout << endl;
+  cout << "EbN0dB = " << EbN0dB << " [dB]" << endl;
+  cout << "BER = " << bit_error_rate << endl;
+  cout << "Saving results to ./result.it" << endl;
+  cout << endl;
+  //Save the results to file:
+  ff.open("result.it");
+  ff << Name("EbN0dB") << EbN0dB;
+  ff << Name("ber") << bit_error_rate;
+  ff.close();
+  //Exit program:
+ 
+
 }
 private:
 	int i, k, l ;
@@ -168,7 +248,7 @@ int main(void)
 	Cell c(0.0, 0.0, 1);
 	Mobile m(1.0, 0.3);
 	c.addUser(m);
-        beta mybeta(7,1,7);
+        beta mybeta(2,1,2);
 	lsfade(7,1,7);
        	mybeta.Betav() ;
 
