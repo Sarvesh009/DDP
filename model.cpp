@@ -9,13 +9,13 @@
 
 using namespace itpp;
 using namespace std;
-
+float k = 1.0 ;
 int No_of_bits = 10000 ;
 double Ec, Eb;
 vec EbN0dB, EbN0, N0, noise_variance, bit_error_rate; //vec is a vector containing double
 bvec transmitted_bits, received_bits, rxbits;                 //bvec is a vector containing bits
 cvec transmitted_symbols(5000),  cbuff, noise;           //cvec is a vector containing double_complex
-cvec buff, cnoise ;
+cvec buff(5000), cnoise(5000) ;
 std::complex<double> received_symbols[10][5][10][5000];
 std::complex<double> rxnoise_symbols[10][5][10][5000];
 
@@ -45,12 +45,14 @@ private:
 	float x, y;
 	};
 
-class beta
+
+
+class lsfade
 {
 
 public:
-	beta(int i, int k, int l) : i(i), k(k), l(l) {} ;   
-void Betav(void)
+	lsfade(int i, int k, int l) : i(i), k(k), l(l) {} ;   
+void Lsfadev(void)
 {
 
 //Declarations of classes:
@@ -66,9 +68,9 @@ void Betav(void)
   tt.tic();
   //Init:
 
- double Ec = 1.0;                      //The transmitted energy per QPSK symbol is 1.
+  double Ec = 1.0;                      //The transmitted energy per QPSK symbol is 1.
   double Eb = Ec / 2.0;                 //The transmitted energy per bit is 0.5.
-  vec EbN0dB = linspace(0.0, 30.0, 11); //Simulate for 10 Eb/N0 values from 0 to 30 dB.
+  vec EbN0dB = linspace(0.0, 30.0, 18); //Simulate for 10 Eb/N0 values from 0 to 30 dB.
   vec EbN0 = inv_dB(EbN0dB);         //Calculate Eb/N0 in a linear scale instead of dB.
   vec N0 = Eb * pow(EbN0, -1.0);     //N0 is the variance of the (complex valued) noise.
   vec bit_error_rate;
@@ -94,19 +96,19 @@ for (int m = 0; m < EbN0dB.length(); m++) {
     //Calculate the bit error rate:
    
 
-vector< vector < vector < vector< complex<double> > > > > Beta;
+vector< vector < vector < vector< complex<double> > > > > Lsfade;
   for(int p = 0; p <i; p++)
   {
     vector <vector< vector < complex<double> > > > w;
-    Beta.push_back( w );
+    Lsfade.push_back( w );
     for(int q = 0; q < k; q++)
     {
       vector< vector < complex<double> > > v;
-      Beta[p].push_back( v );
+      Lsfade[p].push_back( v );
       for(int r = 0; r < l; r++)
      {   
 	vector< complex<double> >  y;
-      	Beta[p][q].push_back( y );
+      	Lsfade[p][q].push_back( y );
 
         // vec c1buff = randn(No_of_bits) ;
 	 cbuff = randn_c(No_of_bits);
@@ -114,7 +116,7 @@ vector< vector < vector < vector< complex<double> > > > > Beta;
 	{
 	   //std::complex<double> mycomplex (c1buff[b],c1buff[b]);
 	   //mycomplex= mycomplex*1/sqrt(2);
-           Beta[p][q][r].push_back(cbuff[b]);
+           Lsfade[p][q][r].push_back(cbuff[b]);
 
           
 	}
@@ -124,69 +126,54 @@ vector< vector < vector < vector< complex<double> > > > > Beta;
 
 
 
-
-
 //for h*x cvec
-  for (int p = 0; p < Beta.size(); p++)
+  for (int p = 0; p < Lsfade.size(); p++)
 {
-    for (int q = 0; q < Beta[p].size(); q++)
+    for (int q = 0; q < Lsfade[p].size(); q++)
 {
-      for ( int r = 0; r < Beta[p][q].size(); r++)
+      for ( int r = 0; r < Lsfade[p][q].size(); r++)
 {
-buff.clear() ;
+	buff.clear() ;
 
 	for (int b = 0; b < transmitted_symbols.size(); b++)
 {
-		received_symbols[p][q][r][b] =  Beta[p][q][r][b]*transmitted_symbols[b] ;
- 		buff.ins(b, 10);
-		//cout << "Beta[" << p << "][" << q << "][" << r << "][" << b << "] = " << Beta[p][q][r][b] << endl; 
-
+		received_symbols[p][q][r][b] = k*Lsfade[p][q][r][b]*transmitted_symbols[b] ;
+ 		//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << Lsfade[p][q][r][b] << endl; 
+		buff[b] = received_symbols[p][q][r][b] ;
 }
 
-//received_bits = qpsk.demodulate_bits(received_symbols[p][q][r][]);
 noise = awgn_channel(buff);
      
-
-//cout<<noise.size()<<endl ;
 	for (int b = 0; b < transmitted_symbols.size(); b++)
 {
 		rxnoise_symbols[p][q][r][b] = noise[b] ;
-		//cout << "Beta[" << p << "][" << q << "][" << r << "][" << b << "] = " << rxnoise_symbols[p][q][r][b] << endl; 
-
+		//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << rxnoise_symbols[p][q][r][b] << endl; 
 
 }
 
-
-//if((p==1)&&(q==0)&&(r=1))
-//{
-for (int b = 0; b < transmitted_symbols.size(); b++)
-{
-cnoise.ins(b, rxnoise_symbols[1][0][1][b]);
-//cout<< noise <<endl ;
-//cout<<"rxnoise"<<rxnoise_symbols[1][0][1][4999]<<endl;
-}
-//}
-received_bits = qpsk.demodulate_bits(noise);
 //cout<<received_bits<<endl ;
 noise.clear() ;
 }
 }
 }
 
+for (int b = 0; b < transmitted_symbols.size(); b++)
+{
+cnoise[b] =  rxnoise_symbols[0][0][0][b];
+//cout<< noise <<endl ;
+//cout<<"rxnoise"<<rxnoise_symbols[1][0][1][4999]<<endl;
+}
+
+received_bits = qpsk.demodulate_bits(cnoise);
+
 //cout<< received_symbols[p][q][r][b]<<endl;
 //cout<<transmitted_symbols[4888]<<endl ;
-//cout<<Beta[6][0][6][4888]<<endl ;
-/*
-for(int b = 0; b < 39 ; b++)
-{
-    rxbits[b] = received_bits[b];
-}
-*/
-cout<<received_bits.size()<<endl;
+//cout<<Lsfade[6][0][6][4888]<<endl ;
 
-    berc.clear();                               //Clear the bit error rate counter
-    berc.count(transmitted_bits, received_bits); //Count the bit errors
-    bit_error_rate(i) = berc.get_errorrate();   //Save the estimated BER in the result vector
+cout<<received_bits.size()<<endl;
+berc.clear();                               //Clear the bit error rate counter
+berc.count(transmitted_bits, received_bits); //Count the bit errors
+bit_error_rate(i) = berc.get_errorrate();   //Save the estimated BER in the result vector
 
 
 }
@@ -212,27 +199,28 @@ private:
 	
 };
 
-class lsfade
+
+class Beta
 {
 public:
-	lsfade(int i, int k, int l) : i(i), k(k), l(l) {} ;   
+	Beta(int i, int k, int l) : i(i), k(k), l(l) {} ;   
 
-void lsfadev()
+void Betav()
 {
 
-  vector < vector < vector<int> > > Lsfade;
+  vector < vector < vector<int> > > Beta;
   for(int a = 0; a < i; a++)
   {
     vector < vector < int > > w;
-    Lsfade.push_back( w );
+    Beta.push_back( w );
     for(int b = 0; b < k; b++)
     {
       vector <int> v;
-      Lsfade[i].push_back( v );
+      Beta[i].push_back( v );
       for(int c = 0; c < l; c++)
       {
 	//k = 1/sqrt(2)*
-        Lsfade[a][b].push_back(0);
+        Beta[a][b].push_back(0);
       }
     }
   }
@@ -248,9 +236,9 @@ int main(void)
 	Cell c(0.0, 0.0, 1);
 	Mobile m(1.0, 0.3);
 	c.addUser(m);
-        beta mybeta(2,1,2);
-	lsfade(7,1,7);
-       	mybeta.Betav() ;
+        lsfade myLsfade(2,1,2);
+	Beta(7,1,7);
+       	myLsfade.Lsfadev() ;
 
 	return 0;
 }
