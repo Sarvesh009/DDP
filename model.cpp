@@ -9,7 +9,7 @@
 
 using namespace itpp;
 using namespace std;
-float k = 1.0 ;
+float factor  = 1 ; ;
 int No_of_bits = 10000 ;
 double Ec, Eb;
 vec EbN0dB, EbN0, N0, noise_variance, bit_error_rate; //vec is a vector containing double
@@ -18,6 +18,7 @@ cvec transmitted_symbols(5000),  cbuff, noise;           //cvec is a vector cont
 cvec buff(5000), cnoise(5000) ;
 std::complex<double> received_symbols[10][5][10][5000];
 std::complex<double> rxnoise_symbols[10][5][10][5000];
+
 
 class Mobile
 {
@@ -52,9 +53,17 @@ class lsfade
 
 public:
 	lsfade(int i, int k, int l) : i(i), k(k), l(l) {} ;   
+
+private:
+	int i, k, l ;
+	
+};
+
+
+
 void Lsfadev(void)
 {
-
+int i =2, k=1 ,l=2;
 //Declarations of classes:
   BPSK bpsk;
   QPSK qpsk;                     //The QPSK modulator class
@@ -73,16 +82,19 @@ void Lsfadev(void)
   vec EbN0dB = linspace(0.0, 30.0, 18); //Simulate for 10 Eb/N0 values from 0 to 30 dB.
   vec EbN0 = inv_dB(EbN0dB);         //Calculate Eb/N0 in a linear scale instead of dB.
   vec N0 = Eb * pow(EbN0, -1.0);     //N0 is the variance of the (complex valued) noise.
-  vec bit_error_rate;
+  
   bit_error_rate.set_size(EbN0dB.length(), false);
-
- RNG_randomize();
+  //Randomize the random number generators in it++:
+  RNG_randomize();
+;
+ //RNG_randomize();
 
 for (int m = 0; m < EbN0dB.length(); m++) {
     //Show how the simulation progresses:
     //cout << "Now simulating Eb/N0 value number " << m + 1 << " of " << EbN0dB.length() << endl;
     //Generate	 a vector of random bits to transmit:
     transmitted_bits = randb(No_of_bits);
+
 
     //Modulate the bits to QPSK symbols:
     transmitted_symbols = qpsk.modulate_bits(transmitted_bits);
@@ -112,6 +124,7 @@ vector< vector < vector < vector< complex<double> > > > > Lsfade;
 
         // vec c1buff = randn(No_of_bits) ;
 	 cbuff = randn_c(No_of_bits);
+
 	for(int b=0; b < No_of_bits; b++)
 	{
 	   //std::complex<double> mycomplex (c1buff[b],c1buff[b]);
@@ -137,12 +150,12 @@ vector< vector < vector < vector< complex<double> > > > > Lsfade;
 
 	for (int b = 0; b < transmitted_symbols.size(); b++)
 {
-		received_symbols[p][q][r][b] = k*Lsfade[p][q][r][b]*transmitted_symbols[b] ;
+		received_symbols[p][q][r][b] = factor*Lsfade[p][q][r][b]*transmitted_symbols[b] ;
  		//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << Lsfade[p][q][r][b] << endl; 
 		buff[b] = received_symbols[p][q][r][b] ;
 }
 
-noise = awgn_channel(buff);
+		noise = awgn_channel(buff);
      
 	for (int b = 0; b < transmitted_symbols.size(); b++)
 {
@@ -164,19 +177,21 @@ cnoise[b] =  rxnoise_symbols[0][0][0][b];
 //cout<<"rxnoise"<<rxnoise_symbols[1][0][1][4999]<<endl;
 }
 
+
+
 received_bits = qpsk.demodulate_bits(cnoise);
 
-//cout<< received_symbols[p][q][r][b]<<endl;
+//cout<< cnoise <<endl;
 //cout<<transmitted_symbols[4888]<<endl ;
 //cout<<Lsfade[6][0][6][4888]<<endl ;
 
-cout<<received_bits.size()<<endl;
-berc.clear();                               //Clear the bit error rate counter
-berc.count(transmitted_bits, received_bits); //Count the bit errors
-bit_error_rate(i) = berc.get_errorrate();   //Save the estimated BER in the result vector
-
+//cout<<received_bits.size()<<endl;
+  berc.clear();                               //Clear the bit error rate counter
+    berc.count(transmitted_bits, received_bits); //Count the bit errors
+    bit_error_rate(m) = berc.get_errorrate();   //Save the estimated BER in the res
 
 }
+
 
 tt.toc();
   //Print the results:
@@ -194,11 +209,6 @@ tt.toc();
  
 
 }
-private:
-	int i, k, l ;
-	
-};
-
 
 class Beta
 {
@@ -233,12 +243,13 @@ private:
 
 int main(void)
 {	
+void Lsfadev(void) ;
 	Cell c(0.0, 0.0, 1);
 	Mobile m(1.0, 0.3);
 	c.addUser(m);
-        lsfade myLsfade(2,1,2);
+        
 	Beta(7,1,7);
-       	myLsfade.Lsfadev() ;
+       Lsfadev() ;
 
 	return 0;
 }
