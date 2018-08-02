@@ -9,7 +9,7 @@
 
 using namespace itpp;
 using namespace std;
-float factor  = 1 ; ;
+float factor  = 0.2	 ;
 int No_of_bits = 10000 ;
 double Ec, Eb;
 vec EbN0dB, EbN0, N0, noise_variance, bit_error_rate; //vec is a vector containing double
@@ -100,7 +100,7 @@ for (int m = 0; m < EbN0dB.length(); m++) {
     transmitted_symbols = qpsk.modulate_bits(transmitted_bits);
 
     //Set the noise variance of the AWGN channel:
-       awgn_channel.set_noise(N0(i));
+       awgn_channel.set_noise(N0(m));
     //Run the transmited symbols through the channel using the () operator:
                //cvec received_symbols = awgn_channel(transmitted_symbols);
     //Demodulate the received QPSK symbols into received bits:
@@ -159,7 +159,7 @@ vector< vector < vector < vector< complex<double> > > > > Lsfade;
      
 	for (int b = 0; b < transmitted_symbols.size(); b++)
 {
-		rxnoise_symbols[p][q][r][b] = noise[b] ;
+		rxnoise_symbols[p][q][r][b] = noise[b]/Lsfade[p][q][r][b]	 ;
 		//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << rxnoise_symbols[p][q][r][b] << endl; 
 
 }
