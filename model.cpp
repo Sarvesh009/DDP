@@ -6,18 +6,16 @@
 #include <complex>
 #include <cstdlib>
 
-
 using namespace itpp;
 using namespace std;
-float factor  = 0.2	 ;
+
+float factor  = 1.0 ;
 int No_of_bits = 10000 ;
-double Ec, Eb;
+int bst = 0, usr = 0, cel = 0 ;
 vec EbN0dB, EbN0, N0, noise_variance, bit_error_rate; //vec is a vector containing double
 bvec transmitted_bits, received_bits, rxbits;                 //bvec is a vector containing bits
-cvec transmitted_symbols(5000),  cbuff, noise;           //cvec is a vector containing double_complex
-cvec buff(5000), cnoise(5000) ;
-std::complex<double> received_symbols[10][5][10][5000];
-std::complex<double> rxnoise_symbols[10][5][10][5000];
+cvec transmitted_symbols(5000), buff(5000), cnoise(5000), cbuff, noise;           //cvec is a vector containing double_complex
+std::complex<double> received_symbols[10][5][10][5000], rxnoise_symbols[10][5][10][5000];
 
 
 class Mobile
@@ -44,7 +42,7 @@ public:
 	BTS(float x, float y) : x(x), y(y) {} ;	
 private:
 	float x, y;
-	};
+};
 
 
 
@@ -63,150 +61,124 @@ private:
 
 void Lsfadev(void)
 {
-int i =2, k=1 ,l=2;
-//Declarations of classes:
-  BPSK bpsk;
-  QPSK qpsk;                     //The QPSK modulator class
-  AWGN_Channel awgn_channel;     //The AWGN channel class
-  it_file ff;                    //For saving the results to file
-  BERC berc;                     //Used to count the bit errors
-  Real_Timer tt;                 //The timer used to measure the execution time
-  
+	//Declarations of classes:
+	BPSK bpsk;
+	QPSK qpsk;                     //The QPSK modulator class
+	AWGN_Channel awgn_channel;     //The AWGN channel class
+	it_file ff;                    //For saving the results to file
+	BERC berc;                     //Used to count the bit errors
+	Real_Timer tt;                 //The timer used to measure the execution time
 
-  //Reset and start the timer:
-  tt.tic();
-  //Init:
+	//Reset and start the timer:
+	tt.tic();	
 
-  double Ec = 1.0;                      //The transmitted energy per QPSK symbol is 1.
-  double Eb = Ec / 2.0;                 //The transmitted energy per bit is 0.5.
-  vec EbN0dB = linspace(0.0, 30.0, 18); //Simulate for 10 Eb/N0 values from 0 to 30 dB.
-  vec EbN0 = inv_dB(EbN0dB);         //Calculate Eb/N0 in a linear scale instead of dB.
-  vec N0 = Eb * pow(EbN0, -1.0);     //N0 is the variance of the (complex valued) noise.
-  
-  bit_error_rate.set_size(EbN0dB.length(), false);
-  //Randomize the random number generators in it++:
-  RNG_randomize();
-;
- //RNG_randomize();
+	//Init:
+	double Ec = 1.0;                      //The transmitted energy per QPSK symbol is 1.
+	double Eb = Ec / 2.0;                 //The transmitted energy per bit is 0.5.
+	vec EbN0dB = linspace(0.0, 30.0, 18); //Simulate for 10 Eb/N0 values from 0 to 30 dB.
+	vec EbN0 = inv_dB(EbN0dB);         //Calculate Eb/N0 in a linear scale instead of dB.
+	vec N0 = Eb * pow(EbN0, -1.0);     //N0 is the variance of the (complex valued) noise.
 
-for (int m = 0; m < EbN0dB.length(); m++) {
-    //Show how the simulation progresses:
-    //cout << "Now simulating Eb/N0 value number " << m + 1 << " of " << EbN0dB.length() << endl;
-    //Generate	 a vector of random bits to transmit:
-    transmitted_bits = randb(No_of_bits);
+	bit_error_rate.set_size(EbN0dB.length(), false);
+	//Randomize the random number generators in it++:
+	RNG_randomize();
+	//RNG_randomize();
 
-
-    //Modulate the bits to QPSK symbols:
-    transmitted_symbols = qpsk.modulate_bits(transmitted_bits);
-
-    //Set the noise variance of the AWGN channel:
-       awgn_channel.set_noise(N0(m));
-    //Run the transmited symbols through the channel using the () operator:
-               //cvec received_symbols = awgn_channel(transmitted_symbols);
-    //Demodulate the received QPSK symbols into received bits:
-  //  bvec 
-    //Calculate the bit error rate:
-   
-
-vector< vector < vector < vector< complex<double> > > > > Lsfade;
-  for(int p = 0; p <i; p++)
-  {
-    vector <vector< vector < complex<double> > > > w;
-    Lsfade.push_back( w );
-    for(int q = 0; q < k; q++)
-    {
-      vector< vector < complex<double> > > v;
-      Lsfade[p].push_back( v );
-      for(int r = 0; r < l; r++)
-     {   
-	vector< complex<double> >  y;
-      	Lsfade[p][q].push_back( y );
-
-        // vec c1buff = randn(No_of_bits) ;
-	 cbuff = randn_c(No_of_bits);
-
-	for(int b=0; b < No_of_bits; b++)
+	for (int m = 0; m < EbN0dB.length(); m++)
 	{
-	   //std::complex<double> mycomplex (c1buff[b],c1buff[b]);
-	   //mycomplex= mycomplex*1/sqrt(2);
-           Lsfade[p][q][r].push_back(cbuff[b]);
 
-          
+		
+		cout << "Now simulating Eb/N0 value number " << m + 1 << " of " << EbN0dB.length() << endl;
+		//Generate a vector of random bits to transmit:
+		transmitted_bits = randb(No_of_bits);
+		//Modulate the bits to QPSK symbols:
+		transmitted_symbols = qpsk.modulate_bits(transmitted_bits);
+		//Set the noise variance of the AWGN channel:
+		awgn_channel.set_noise(N0(m));		
+		
+		std::complex<double> Lsfade[bst][usr][cel][No_of_bits];
+		for(int p = 0; p < bst; p++)
+		{
+			for(int q = 0; q < usr; q++)
+			{
+				for(int r = 0; r < cel; r++)
+				{   
+					// vec c1buff = randn(No_of_bits) ;
+					 cbuff = randn_c(No_of_bits);
+					for(int b=0; b < No_of_bits; b++)
+					{
+						//std::complex<double> mycomplex (c1buff[b],c1buff[b]);
+						//mycomplex= mycomplex*1/sqrt(2);
+						Lsfade[p][q][r][b] = cbuff[b];
+					 
+					}
+				}
+			}
+		}
+
+		//for h*x cvec
+		for (int p = 0; p < bst; p++)
+		{
+			for (int q = 0; q <  usr; q++)
+			{
+				for ( int r = 0; r < cel ; r++)
+				{
+					buff.clear() ;
+					for (int b = 0; b < transmitted_symbols.size(); b++)
+					{
+						received_symbols[p][q][r][b] = factor*Lsfade[p][q][r][b]*transmitted_symbols[b] ;
+						//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << Lsfade[p][q][r][b] << endl; 
+						buff[b] = received_symbols[p][q][r][b] ;
+					}
+						//Run the transmited symbols through the channel using the () operator:
+						noise = awgn_channel(buff);
+					for (int b = 0; b < transmitted_symbols.size(); b++)
+					{
+						rxnoise_symbols[p][q][r][b] = noise[b]/Lsfade[p][q][r][b]	 ;
+						//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << rxnoise_symbols[p][q][r][b] << endl;
+					}
+
+					//cout<<received_bits<<endl ;
+					noise.clear() ;
+				}
+			}
+		}
+
+		for (int b = 0; b < transmitted_symbols.size(); b++)
+		{
+			cnoise[b] =  rxnoise_symbols[0][0][0][b];
+		}
+
+		//Demodulate the received QPSK symbols into received bits:
+		received_bits = qpsk.demodulate_bits(cnoise);
+
+		//cout<< cnoise <<endl;
+		//cout<<transmitted_symbols[4888]<<endl ;
+		//cout<<Lsfade[6][0][6][4888]<<endl ;
+		//cout<<received_bits.size()<<endl;
+		//Calculate the bit error rate:
+
+		berc.clear();                               //Clear the bit error rate counter
+		berc.count(transmitted_bits, received_bits); //Count the bit errors
+		bit_error_rate(m) = berc.get_errorrate();   //Save the estimated BER in the res
+
 	}
-      }
-    }
-  }
 
 
+	tt.toc();
+	//Print the results:
+	cout << endl;
+	cout << "EbN0dB = " << EbN0dB << " [dB]" << endl;
+	cout << "BER = " << bit_error_rate << endl;
+	cout << "Saving results to ./result.it" << endl;
+	cout << endl;
+	//Save the results to file:
+	ff.open("result.it");
+	ff << Name("EbN0dB") << EbN0dB;
+	ff << Name("ber") << bit_error_rate;
+	ff.close();
+	//Exit program:
 
-//for h*x cvec
-  for (int p = 0; p < Lsfade.size(); p++)
-{
-    for (int q = 0; q < Lsfade[p].size(); q++)
-{
-      for ( int r = 0; r < Lsfade[p][q].size(); r++)
-{
-	buff.clear() ;
-
-	for (int b = 0; b < transmitted_symbols.size(); b++)
-{
-		received_symbols[p][q][r][b] = factor*Lsfade[p][q][r][b]*transmitted_symbols[b] ;
- 		//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << Lsfade[p][q][r][b] << endl; 
-		buff[b] = received_symbols[p][q][r][b] ;
-}
-
-		noise = awgn_channel(buff);
-     
-	for (int b = 0; b < transmitted_symbols.size(); b++)
-{
-		rxnoise_symbols[p][q][r][b] = noise[b]/Lsfade[p][q][r][b]	 ;
-		//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << rxnoise_symbols[p][q][r][b] << endl; 
-
-}
-
-//cout<<received_bits<<endl ;
-noise.clear() ;
-}
-}
-}
-
-for (int b = 0; b < transmitted_symbols.size(); b++)
-{
-cnoise[b] =  rxnoise_symbols[0][0][0][b];
-//cout<< noise <<endl ;
-//cout<<"rxnoise"<<rxnoise_symbols[1][0][1][4999]<<endl;
-}
-
-
-
-received_bits = qpsk.demodulate_bits(cnoise);
-
-//cout<< cnoise <<endl;
-//cout<<transmitted_symbols[4888]<<endl ;
-//cout<<Lsfade[6][0][6][4888]<<endl ;
-
-//cout<<received_bits.size()<<endl;
-  berc.clear();                               //Clear the bit error rate counter
-    berc.count(transmitted_bits, received_bits); //Count the bit errors
-    bit_error_rate(m) = berc.get_errorrate();   //Save the estimated BER in the res
-
-}
-
-
-tt.toc();
-  //Print the results:
-  cout << endl;
-  cout << "EbN0dB = " << EbN0dB << " [dB]" << endl;
-  cout << "BER = " << bit_error_rate << endl;
-  cout << "Saving results to ./result.it" << endl;
-  cout << endl;
-  //Save the results to file:
-  ff.open("result.it");
-  ff << Name("EbN0dB") << EbN0dB;
-  ff << Name("ber") << bit_error_rate;
-  ff.close();
-  //Exit program:
- 
 
 }
 
@@ -217,23 +189,21 @@ public:
 
 void Betav()
 {
-
-  vector < vector < vector<int> > > Beta;
-  for(int a = 0; a < i; a++)
-  {
-    vector < vector < int > > w;
-    Beta.push_back( w );
-    for(int b = 0; b < k; b++)
-    {
-      vector <int> v;
-      Beta[i].push_back( v );
-      for(int c = 0; c < l; c++)
-      {
-	//k = 1/sqrt(2)*
-        Beta[a][b].push_back(0);
-      }
-    }
-  }
+	vector < vector < vector<int> > > Beta;
+	for(int a = 0; a < i; a++)
+	{
+		vector < vector < int > > w;
+		Beta.push_back( w );
+		for(int b = 0; b < k; b++)
+		{
+			vector <int> v;
+			Beta[i].push_back( v );
+			for(int c = 0; c < l; c++)
+			{ 
+				Beta[a][b].push_back(0);
+			}
+		}
+	}
 }
 
 private:
@@ -243,13 +213,14 @@ private:
 
 int main(void)
 {	
-void Lsfadev(void) ;
+	void Lsfadev(void) ;
+
 	Cell c(0.0, 0.0, 1);
 	Mobile m(1.0, 0.3);
-	c.addUser(m);
-        
+	c.addUser(m); 
+	bst=2 ; cel = 2 ; usr =1 ;       
 	Beta(7,1,7);
-       Lsfadev() ;
+	Lsfadev() ;
 
 	return 0;
 }
