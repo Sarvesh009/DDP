@@ -9,12 +9,12 @@
 using namespace itpp;
 using namespace std;
 
-float factor  = 1.0 ;
+float factor  = 1.0 ; //beta fator(temporary)
 int No_of_bits = 10000 ;
-int bst = 0, usr = 0, cel = 0 ;
+int bst = 0, usr = 0, cel = 0 ; //no. of base stations, users and cells (assuming 1bst per cell)
 vec EbN0dB, EbN0, N0, noise_variance, bit_error_rate; //vec is a vector containing double
-bvec transmitted_bits, received_bits, rxbits;                 //bvec is a vector containing bits
-cvec transmitted_symbols(5000), buff(5000), cnoise(5000), cbuff, noise;           //cvec is a vector containing double_complex
+bvec transmitted_bits, received_bits, rxbits; //bvec is a vector containing bits
+cvec transmitted_symbols(5000), buff(5000), cnoise(5000), cbuff, noise;  //cvec is a vector containing double_complex
 std::complex<double> received_symbols[10][5][10][5000], rxnoise_symbols[10][5][10][5000];
 
 
@@ -85,10 +85,7 @@ void Lsfadev(void)
 	//RNG_randomize();
 
 	for (int m = 0; m < EbN0dB.length(); m++)
-	{
-
-		
-		cout << "Now simulating Eb/N0 value number " << m + 1 << " of " << EbN0dB.length() << endl;
+	{		
 		//Generate a vector of random bits to transmit:
 		transmitted_bits = randb(No_of_bits);
 		//Modulate the bits to QPSK symbols:
@@ -117,11 +114,11 @@ void Lsfadev(void)
 		}
 
 		//for h*x cvec
-		for (int p = 0; p < bst; p++)
+		for (int p = 0; p < bst; p++) //for every base station
 		{
-			for (int q = 0; q <  usr; q++)
+			for (int q = 0; q <  usr; q++) //for every user
 			{
-				for ( int r = 0; r < cel ; r++)
+				for ( int r = 0; r < cel ; r++) //for every cell
 				{
 					buff.clear() ;
 					for (int b = 0; b < transmitted_symbols.size(); b++)
@@ -130,11 +127,11 @@ void Lsfadev(void)
 						//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << Lsfade[p][q][r][b] << endl; 
 						buff[b] = received_symbols[p][q][r][b] ;
 					}
-						//Run the transmited symbols through the channel using the () operator:
+						//Run the transmited symbols through the channel using the () operator for adding white noise:
 						noise = awgn_channel(buff);
 					for (int b = 0; b < transmitted_symbols.size(); b++)
 					{
-						rxnoise_symbols[p][q][r][b] = noise[b]/Lsfade[p][q][r][b]	 ;
+						rxnoise_symbols[p][q][r][b] = noise[b]/Lsfade[p][q][r][b]; //zero forcing
 						//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << rxnoise_symbols[p][q][r][b] << endl;
 					}
 
