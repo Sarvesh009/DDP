@@ -12,11 +12,12 @@ using namespace std;
 float factor  = 1.0 ; //beta fator(temporary)
 int No_of_bits = 10000 ;
 int bst = 0, usr = 0, cel = 0 ; //no. of base stations, users and cells (assuming 1bst per cell)
+int usrno = 0 ; //simulation for interference to be calculate for this user number_temporary 
 vec EbN0dB, EbN0, N0, noise_variance, bit_error_rate; //vec is a vector containing double
 bvec transmitted_bits, received_bits, rxbits; //bvec is a vector containing bits
 cvec transmitted_symbols(5000), buff(5000), cnoise(5000), cbuff, noise;  //cvec is a vector containing double_complex
 std::complex<double> received_symbols[10][5][10][5000], rxnoise_symbols[10][5][10][5000];
-
+std::complex<double> interference[5000];
 
 class Mobile
 {
@@ -58,9 +59,39 @@ private:
 };
 
 
+class Beta
+{
+public:
+	Beta(int i, int k, int l) : i(i), k(k), l(l) {} ;   
+
+void Betav()
+{
+	vector < vector < vector<int> > > Beta;
+	for(int a = 0; a < i; a++)
+	{
+		vector < vector < int > > w;
+		Beta.push_back( w );
+		for(int b = 0; b < k; b++)
+		{
+			vector <int> v;
+			Beta[i].push_back( v );
+			for(int c = 0; c < l; c++)
+			{ 
+				Beta[a][b].push_back(0);
+			}
+		}
+	}
+}
+
+private:
+	int i, k, l ;
+	
+};
 
 void Lsfadev(void)
 {
+        void interfer(void) ;
+	void zf(void) ;
 	//Declarations of classes:
 	BPSK bpsk;
 	QPSK qpsk;                     //The QPSK modulator class
@@ -92,7 +123,6 @@ void Lsfadev(void)
 		transmitted_symbols = qpsk.modulate_bits(transmitted_bits);
 		//Set the noise variance of the AWGN channel:
 		awgn_channel.set_noise(N0(m));		
-		
 		std::complex<double> Lsfade[bst][usr][cel][No_of_bits];
 		for(int p = 0; p < bst; p++)
 		{
@@ -125,26 +155,27 @@ void Lsfadev(void)
 					{
 						received_symbols[p][q][r][b] = factor*Lsfade[p][q][r][b]*transmitted_symbols[b] ;
 						//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << Lsfade[p][q][r][b] << endl; 
-						buff[b] = received_symbols[p][q][r][b] ;
+						buff[b] = received_symbols[p][q][r][b];
 					}
-						//Run the transmited symbols through the channel using the () operator for adding white noise:
-						noise = awgn_channel(buff);
+					
+					//Run the transmited symbols through the channel using the () operator for adding white noise:
+					noise = awgn_channel(buff);
+
 					for (int b = 0; b < transmitted_symbols.size(); b++)
 					{
-						rxnoise_symbols[p][q][r][b] = noise[b]/Lsfade[p][q][r][b]; //zero forcing
+						//rxnoise_symbols[p][q][r][b] = noise[b]/Lsfade[p][q][r][b]; //zero forcing
+						rxnoise_symbols[p][q][r][b] = noise[b]; 
 						//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << rxnoise_symbols[p][q][r][b] << endl;
 					}
-
 					//cout<<received_bits<<endl ;
 					noise.clear() ;
 				}
 			}
 		}
 
-		for (int b = 0; b < transmitted_symbols.size(); b++)
-		{
-			cnoise[b] =  rxnoise_symbols[0][0][0][b];
-		}
+		interfer() ;
+
+	//	zf() ;
 
 		//Demodulate the received QPSK symbols into received bits:
 		received_bits = qpsk.demodulate_bits(cnoise);
@@ -179,34 +210,38 @@ void Lsfadev(void)
 
 }
 
-class Beta
-{
-public:
-	Beta(int i, int k, int l) : i(i), k(k), l(l) {} ;   
 
-void Betav()
+
+void interfer(void)
 {
-	vector < vector < vector<int> > > Beta;
-	for(int a = 0; a < i; a++)
-	{
-		vector < vector < int > > w;
-		Beta.push_back( w );
-		for(int b = 0; b < k; b++)
+        
+	for (int b = 0; b < transmitted_symbols.size(); b++)
 		{
-			vector <int> v;
-			Beta[i].push_back( v );
-			for(int c = 0; c < l; c++)
-			{ 
-				Beta[a][b].push_back(0);
+			for (int p = 0; p < bst; p++) //for every base station
+			{
+				for ( int r = 0; r < cel ; r++) //for every cell
+				{
+				  interference[b] += rxnoise_symbols[p][usrno][r][b] ;
+				}		
 			}
 		}
+
+	for (int b = 0; b < transmitted_symbols.size(); b++)
+	{
+		cnoise[b] =  interference[b];
 	}
 }
 
-private:
-	int i, k, l ;
-	
-};
+
+void zf(void)
+{
+	for (int b = 0; b < transmitted_symbols.size(); b++)
+	{
+		cnoise[b] =  rxnoise_symbols[0][0][0][b];
+	}
+}
+
+
 
 int main(void)
 {	
@@ -215,7 +250,7 @@ int main(void)
 	Cell c(0.0, 0.0, 1);
 	Mobile m(1.0, 0.3);
 	c.addUser(m); 
-	bst=2 ; cel = 2 ; usr =1 ;       
+	bst=7 ; cel = 7 ; usr =1 ;       
 	Beta(7,1,7);
 	Lsfadev() ;
 
