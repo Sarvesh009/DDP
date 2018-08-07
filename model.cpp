@@ -9,16 +9,16 @@
 using namespace itpp;
 using namespace std;
 
-float factor  = 1.0 ; //beta fator(temporary)
+float factor  = 0 ; //beta fator(temporary)
 int No_of_bits = 10000 ;
-int bst = 0, usr = 0, cel = 0 ; //no. of base stations, users and cells (assuming 1bst per cell)
+int bst = 1, usr = 1, cel = 1 ; //no. of base stations, users and cells (assuming 1bst per cell)
 int usrno = 0 ; //simulation for interference to be calculate for this user number_temporary 
 vec EbN0dB, EbN0, N0, noise_variance, bit_error_rate; //vec is a vector containing double
 bvec transmitted_bits, received_bits, rxbits; //bvec is a vector containing bits
 cvec transmitted_symbols(5000), buff(5000), cnoise(5000), cbuff, noise;  //cvec is a vector containing double_complex
 std::complex<double> received_symbols[10][5][10][5000], rxnoise_symbols[10][5][10][5000];
 std::complex<double> interference[5000];
-
+float beta[7][1][1] ;
 class Mobile
 {
 public:
@@ -59,34 +59,33 @@ private:
 };
 
 
-class Beta
-{
-public:
-	Beta(int i, int k, int l) : i(i), k(k), l(l) {} ;   
+  
 
-void Betav()
+void Betav(void)
 {
-	vector < vector < vector<int> > > Beta;
-	for(int a = 0; a < i; a++)
+	float base_loc[][2] = {{0,0},{0,2},{1.73,1},{1.73,-1},{0,-2},{-1.73,-1},{-1.73,1}};
+	float user_loc[][2] =  {{0.5,0.5}};	
+	for(int i = 0; i < bst; i++)
 	{
-		vector < vector < int > > w;
-		Beta.push_back( w );
-		for(int b = 0; b < k; b++)
-		{
-			vector <int> v;
-			Beta[i].push_back( v );
-			for(int c = 0; c < l; c++)
-			{ 
-				Beta[a][b].push_back(0);
+		for(int j = 0 ; j <usr; j++)
+			{
+				for(int k= 0 ; k<cel; k++)
+					{
+					beta[i][j][k]= sqrt((pow((base_loc[i][0]-user_loc[0][0]),2)) + (pow((base_loc[i][1]-user_loc[0][1]),2)));
+					beta[i][j][k]= pow((4*3.14*beta[i][j][k]*3),2) ; //friis					 
+					}
 			}
-		}
 	}
-}
-
-private:
-	int i, k, l ;
+        //8cout<<beta[0][0][0] ;	
+	int D = 2;
+	float n=0 ;
+        n= 4*3.14*D*3 ; //friis
+	n = pow(n, 2);
 	
-};
+	
+	vector < vector < vector<int> > > Beta;
+	
+}
 
 void Lsfadev(void)
 {
@@ -153,7 +152,14 @@ void Lsfadev(void)
 					buff.clear() ;
 					for (int b = 0; b < transmitted_symbols.size(); b++)
 					{
-						received_symbols[p][q][r][b] = factor*Lsfade[p][q][r][b]*transmitted_symbols[b] ;
+						received_symbols[p][q][r][b] = Lsfade[p][q][r][b]*transmitted_symbols[b] ;
+						if(p!=0)
+						{
+							received_symbols[p][q][r][b] = factor*received_symbols[p][q][r][b] ;
+							//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << rxnoise_symbols[6][q][r][b] << endl; 
+								
+						}
+						
 						//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << Lsfade[p][q][r][b] << endl; 
 						buff[b] = received_symbols[p][q][r][b];
 					}
@@ -163,8 +169,9 @@ void Lsfadev(void)
 
 					for (int b = 0; b < transmitted_symbols.size(); b++)
 					{
-						//rxnoise_symbols[p][q][r][b] = noise[b]/Lsfade[p][q][r][b]; //zero forcing
-						rxnoise_symbols[p][q][r][b] = noise[b]; 
+						rxnoise_symbols[p][q][r][b] = noise[b]/Lsfade[p][q][r][b]; //zero forcing
+						//              rxnoise_symbols[p][q][r][b] = noise[b]; 
+						
 						//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << rxnoise_symbols[p][q][r][b] << endl;
 					}
 					//cout<<received_bits<<endl ;
@@ -175,7 +182,9 @@ void Lsfadev(void)
 
 		interfer() ;
 
-	//	zf() ;
+		//zf() ;
+
+		mmse() ;
 
 		//Demodulate the received QPSK symbols into received bits:
 		received_bits = qpsk.demodulate_bits(cnoise);
@@ -196,6 +205,8 @@ void Lsfadev(void)
 	tt.toc();
 	//Print the results:
 	cout << endl;
+	//cout<<interference[466] - cnoise[466] <<endl;
+      //  cout << received_symbols[6][0][0][916];
 	cout << "EbN0dB = " << EbN0dB << " [dB]" << endl;
 	cout << "BER = " << bit_error_rate << endl;
 	cout << "Saving results to ./result.it" << endl;
@@ -221,14 +232,19 @@ void interfer(void)
 			{
 				for ( int r = 0; r < cel ; r++) //for every cell
 				{
-				  interference[b] += rxnoise_symbols[p][usrno][r][b] ;
+				  interference[b]+= rxnoise_symbols[p][usrno][r][b] ;
+					
 				}		
 			}
 		}
 
+
+
 	for (int b = 0; b < transmitted_symbols.size(); b++)
 	{
 		cnoise[b] =  interference[b];
+		interference[b] = 0;
+                
 	}
 }
 
@@ -242,17 +258,35 @@ void zf(void)
 }
 
 
+void mmse(void)
+{
+
+float h_mmse[bst][cel];
+
+for(int j = 0 ; j < cel ; j++)
+{
+	for(int l = 0 ; l < bst ; l++)
+	{
+		h_mmse[j][l] = sqrt(beta[j][0][l])*sqrt(pwr*tau)/(1+ beta[j][0][l]);
+	}
+}
+
+
+}
+
+
 
 int main(void)
 {	
 	void Lsfadev(void) ;
+	void Betav(void) ;
 
 	Cell c(0.0, 0.0, 1);
 	Mobile m(1.0, 0.3);
 	c.addUser(m); 
-	bst=7 ; cel = 7 ; usr =1 ;       
-	Beta(7,1,7);
+	bst=7 ; cel = 1 ; usr =1 ;       
+	Betav();
 	Lsfadev() ;
-
+        
 	return 0;
 }
