@@ -11,16 +11,18 @@ using namespace std;
 
 float factor  = 0 ; //beta fator(temporary)
 int No_of_bits = 10000 ;
-int bst = 7, usr = 4, cel = 1 ; //no. of base stations, users and cells (assuming 1bst per cell)
+int bst = 7, usr = 4, cel = 7 ; //no. of base stations, users and cells (assuming 1bst per cell)
 int usrno = 0 ; //simulation for interference to be calculate for this user number_temporary 
 vec EbN0dB, EbN0, N0, noise_variance, bit_error_rate; //vec is a vector containing double
 bvec transmitted_bits, received_bits, rxbits; //bvec is a vector containing bits
-cvec transmitted_symbols(5000), buff(5000), cnoise(5000), cbuff, noise, noise1;  //cvec is a vector containing double_complex
+cvec transmitted_symbols(5000), buff(5000), cnoise(5000), cbuff, noise, noise1, noise2(5000);  //cvec is a vector containing double_complex
 std::complex<double> received_symbols[10][5][10][5000], rxnoise_symbols[10][5][10][5000];
 std::complex<double> interference[5000];
-float beta[7][4][1] ;
-vector<vector<int> > si;
+float beta[7][4][1];
+AWGN_Channel awgn_channel;     //The AWGN channel class
 
+vector<vector<int> > si;
+int si_inv =  1;
 class Mobile
 {
 public:
@@ -47,8 +49,6 @@ private:
 	float x, y;
 };
 
-
-
 class lsfade
 {
 
@@ -60,30 +60,33 @@ private:
 	
 };
 
-
-  
-
 void Betav(void)
 {
 	float base_loc[7][2] = {{0,0},{0,2},{1.73,1},{1.73,-1},{0,-2},{-1.73,-1},{-1.73,1}};
-	float user_loc[1][2] =  {{0.5,0.5}};	
+
+	float user_loc[1][2] =  {{0.5,0.5}};
+
+	//float user_loc[6][2] =  {{0.5,0.5}, {2.23,1.5}, {2.23,-1.5}, {0,-2.5}, {-2.23,-1.5}, {-2.23,1.5}};	
+
 	int D = 0;
+	int cl =0;
 	for(int i = 0; i < bst; i++)
 	{
 		for(int j = 0 ; j <usr; j++)
 			{
-				for(int k= 0 ; k<cel; k++)
-					{
+				
 					D = sqrt((pow((base_loc[i][0]-user_loc[0][0]),2)) + (pow((base_loc[i][1]-user_loc[0][1]),2)));
-					beta[i][j][k]= pow((4*3.14*D*3),2) ; //friis					 
-					}
+					beta[i][j][cl]= pow((4*3.14*D*3),2) ; //friis					 
+					cl++;
 			}
+
+			cl=0;
 	}
 
         //out<<beta[0][0][0];	
 	/*
 	float n=0 ;
-        n= 4*3.14*D*3 ; //friis
+    n = 4*3.14*D*3 ; //friis
 	n = pow(n, 2);	
 	//vector < vector < vector<int> > > Beta;
 	*/
@@ -91,13 +94,13 @@ void Betav(void)
 
 void Lsfadev(void)
 {
-        void interfer(void) ;
+    void interfer(void) ;
 	void zf(void) ;
+	void uplink(complex<double> Lsfade[7][1][7][5000]);
 	//void uplink(std::complex<double> Lsfade);
 	//Declarations of classes:
 	BPSK bpsk;
 	QPSK qpsk;                     //The QPSK modulator class
-	AWGN_Channel awgn_channel;     //The AWGN channel class
 	it_file ff;                    //For saving the results to file
 	BERC berc;                     //Used to count the bit errors
 	Real_Timer tt;                 //The timer used to measure the execution time
@@ -125,7 +128,11 @@ void Lsfadev(void)
 		transmitted_symbols = qpsk.modulate_bits(transmitted_bits);
 		//Set the noise variance of the AWGN channel:
 		awgn_channel.set_noise(N0(m));		
-		std::complex<double> Lsfade[bst][usr][cel][No_of_bits];
+		
+
+		std::complex<double> Lsfade[7][1][7][5000];
+		
+
 		for(int p = 0; p < bst; p++)
 		{
 			for(int q = 0; q < usr; q++)
@@ -144,7 +151,7 @@ void Lsfadev(void)
 			}
 		}
 		
-		//uplink(Lsfade) ;
+		uplink(Lsfade) ;
 			
 		//for h*x cvec
 		for (int p = 0; p < bst; p++) //for every base station
@@ -262,7 +269,6 @@ void zf(void)
 /*/
 void mmse(void)
 {
-
 float h_mmse[bst][cel];
 int tau = 0 , pwr = 0;
 for(int j = 0 ; j < cel ; j++)
@@ -270,54 +276,69 @@ for(int j = 0 ; j < cel ; j++)
 	for(int l = 0 ; l < bst ; l++)
 	{
 		h_mmse[j][l] = sqrt(beta[j][0][l])*sqrt(pwr*tau)/(1+ beta[j][0][l]);
-	}
-
 }
-
+}
 return;
 }
-
 */
 
-void uplink(std::complex<double> Lsfade)
+void uplink(complex<double> Lsfade[7][1][7][5000])
 {
-
-int power = 1, K = 5;
-cvec pil_out(5000), g_hat;
-for(int i = 0 ; i< usr; i++)
-{
-	vector <int> v;
-	si.push_back(v);
-	for(int j = 0 ; j< K; j++)
+	int power = 1, K = 5;
+	std::complex<double> pil_out[7][5000], g_hat[5000];
+	std::complex<double> norm;
+	cvec w(5000); //beamforming vector
+	for(int i = 0 ; i< usr; i++)
 	{
-		if(i==j)
-			si[i].push_back(1);
+		vector <int> v;
+		si.push_back(v);
+		for(int j = 0 ; j< K; j++)
+		{
+			if(i==j)
+				si[i].push_back(1);
+			else
+				si[i].push_back(0);
 
-		else
-			si[i].push_back(0);
+		}
 	}
-}
-/*
-int x = 0;
-	for(int y = 0 ; y < usr ; y++)
-		for(int z = 0 ; z < cel; z++ )
-			pil_out[x] = sqrt((beta[x][y][z])*power)*Lsfade[x][y][z]*si[z][y]; //to be edited
-		
-
-noise1 = awgn_channel(pil_out) ;
-
-//g_hat = pil_out*pil_inv/K ;
 
 
-*/
+	int z = 0;
+	for(int x = 0 ; x < 7; x++ )
+	{
+		for(int y = 0 ; y < 1 ; y++)
+		{
+			for(int d = 0 ; d < 5000 ; d++)
+			{
+				pil_out[x][d] = sqrt((beta[x][y][z])*power)*Lsfade[x][y][z][d]*si[x][y]; //to be edited
+				z++ ;
+		    }
+		}
+		z=0;
+	}
 
-//noise = awgn_channel(pil_out);
+	for(int i=0;i<5000;i++)
+	{
+		noise2[i] = pil_out[0][i];
+	}
 
-// g^ = noise*si^/ K ;
+	noise1 = awgn_channel(noise2);	
 
-//beamforming
-// w = g^/||g||
-return;
+	for(int i = 0 ; i < 50000; i++)
+	{
+		g_hat[i] = noise2[i]/K ;
+		norm += pow(g_hat[i],2) ;
+    }
+
+    norm = sqrt(norm) ;
+
+
+	//beamforming
+	// w = g^/||g||
+    for(int i = 0 ; i < 50000; i++)
+    	w[i] = g_hat[i]*si_inv/norm  ;
+	
+	return;
 
 }
 
@@ -331,7 +352,7 @@ int main(void)
 	Cell c(0.0, 0.0, 1);
 	Mobile m(1.0, 0.3);
 	c.addUser(m); 
-	bst=7 ; cel = 1 ; usr =4 ;       
+	bst=7 ; cel = 7 ; usr =1 ;       
 	Betav();
 	Lsfadev() ;
         //uplink() ;
