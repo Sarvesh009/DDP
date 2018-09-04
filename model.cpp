@@ -9,7 +9,7 @@
 using namespace itpp;
 using namespace std;
 
-float factor  = 0 ; //beta fator(temporary)
+float factor  = 0.6 ; //beta fator(temporary)
 int No_of_bits = 10000 ;
 int bst = 7, usr = 4, cel = 7 ; //no. of base stations, users and cells (assuming 1bst per cell)
 int usrno = 0 ; //simulation for interference to be calculate for this user number_temporary 
@@ -62,11 +62,11 @@ private:
 
 void Betav(void)
 {
-	float base_loc[7][2] = {{0,0},{0,2},{1.73,1},{1.73,-1},{0,-2},{-1.73,-1},{-1.73,1}};
+	float base_loc[7][2] = {{0,0},{0,2},{1,1.73},{1, -1.73},{0,-2},{-1,-1.73},{-1,1.73}};
 
-	float user_loc[1][2] =  {{0.5,0.5}};
+	//float user_loc[1][2] =  {{0.5,0.5}};
 
-	//float user_loc[6][2] =  {{0.5,0.5}, {2.23,1.5}, {2.23,-1.5}, {0,-2.5}, {-2.23,-1.5}, {-2.23,1.5}};	
+	float user_loc[7][2] =  {{0,0.5}, {0,2.5}, {1.25,2.165}, {1.25,-2.165}, {0,-2.5}, {-1.25, -2.165}, {-1.25,2.165}};	
 
 	int D = 0;
 	int cl =0;
@@ -96,7 +96,7 @@ void Lsfadev(void)
 {
     void interfer(void) ;
 	void zf(void) ;
-	void uplink(complex<double> Lsfade[7][1][7][5000]);
+	void uplink(complex<double> Lsfade[7][1][7][10000]);
 	//void uplink(std::complex<double> Lsfade);
 	//Declarations of classes:
 	BPSK bpsk;
@@ -130,9 +130,7 @@ void Lsfadev(void)
 		awgn_channel.set_noise(N0(m));		
 		
 
-		std::complex<double> Lsfade[7][1][7][5000];
-		
-
+		std::complex<double> Lsfade[7][1][7][10000];
 		for(int p = 0; p < bst; p++)
 		{
 			for(int q = 0; q < usr; q++)
@@ -140,7 +138,7 @@ void Lsfadev(void)
 				for(int r = 0; r < cel; r++)
 				{   
 					// vec c1buff = randn(No_of_bits) ;
-					 cbuff = randn_c(No_of_bits);
+					cbuff = randn_c(No_of_bits);
 					for(int b=0; b < No_of_bits; b++)
 					{
 						//std::complex<double> mycomplex (c1buff[b],c1buff[b]);
@@ -151,7 +149,7 @@ void Lsfadev(void)
 			}
 		}
 		
-		uplink(Lsfade) ;
+		//uplink(Lsfade) ;
 			
 		//for h*x cvec
 		for (int p = 0; p < bst; p++) //for every base station
@@ -176,8 +174,8 @@ void Lsfadev(void)
 					noise = awgn_channel(buff);					
 					for (int b = 0; b < transmitted_symbols.size(); b++)
 					{
-						//rxnoise_symbols[p][q][r][b] = noise[b]/Lsfade[p][q][r][b]; //zero forcing
-						       rxnoise_symbols[p][q][r][b] = noise[b]; 
+						    rxnoise_symbols[p][q][r][b] = noise[b]/Lsfade[p][q][r][b]; //zero forcing
+						    //rxnoise_symbols[p][q][r][b] = noise[b]; 
 						
 						//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << rxnoise_symbols[p][q][r][b] << endl;
 					}
@@ -282,10 +280,11 @@ return;
 }
 */
 
-void uplink(complex<double> Lsfade[7][1][7][5000])
+void uplink(complex<double> Lsfade[7][1][7][10000])
 {
-	int power = 1, K = 5;
-	std::complex<double> pil_out[7][5000], g_hat[5000];
+	
+	int power = 1, K = 1;
+	std::complex<double> pil_out[7][10000], g_hat[5000];
 	std::complex<double> norm;
 	cvec w(5000); //beamforming vector
 	for(int i = 0 ; i< usr; i++)
@@ -298,24 +297,22 @@ void uplink(complex<double> Lsfade[7][1][7][5000])
 				si[i].push_back(1);
 			else
 				si[i].push_back(0);
-
 		}
 	}
 
-
-	int z = 0;
-	for(int x = 0 ; x < 7; x++ )
+	int x = 0;
+	for(int y = 0 ; y < 1 ; y++)
 	{
-		for(int y = 0 ; y < 1 ; y++)
+		for(int z = 0 ; z < cel ; y++)
 		{
-			for(int d = 0 ; d < 5000 ; d++)
-			{
-				pil_out[x][d] = sqrt((beta[x][y][z])*power)*Lsfade[x][y][z][d]*si[x][y]; //to be edited
-				z++ ;
-		    }
+				for(int d = 0 ; d < 10000 ; d++)
+				{
+					pil_out[x][d] = sqrt((beta[x][y][z])*power)*Lsfade[x][y][z][d]*si[x][y]; //to be edited
+				}
 		}
-		z=0;
+			
 	}
+	
 
 	for(int i=0;i<5000;i++)
 	{
@@ -352,7 +349,7 @@ int main(void)
 	Cell c(0.0, 0.0, 1);
 	Mobile m(1.0, 0.3);
 	c.addUser(m); 
-	bst=7 ; cel = 7 ; usr =1 ;       
+	bst=7 ; cel = 7 ; usr =1 ;   //usr is users per cell    
 	Betav();
 	Lsfadev() ;
         //uplink() ;
