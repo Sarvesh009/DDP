@@ -335,6 +335,24 @@ void uplink(complex<double> Lsfade[7][1][7][10000])
     for(int i = 0 ; i < 50000; i++)
     	w[i] = g_hat[i]*si_inv/norm  ;
 	
+
+//plot uplink
+
+//plot downlink
+
+
+/*
+int buf_d = 0;
+alpha[k][l] = pow*beta[l][j[k] + 1/K ;
+for(int l=0; l<cel ; l++)
+{
+sinr_d = P[k][l]*pow(beta[l][k][i],2)/pow(alpha,2);
+buf_d+= sinr_d ;
+}
+i = 0;
+sinr_d = P[k][l]*pow(beta[l][k][i],2)/pow(alpha,2);
+sinr_d = sinr_d/buf_d ;
+*/
 	return;
 
 }
