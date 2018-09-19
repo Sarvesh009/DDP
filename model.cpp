@@ -11,7 +11,7 @@ using namespace std;
 
 float factor  = 1.0 ; //beta fator(temporary)
 int No_of_bits = 10000 ;
-int bst = 7, usr = 7, cel = 7 ; //no. of base stations, users and cells (assuming 1bst per cell)
+int bst = 7, usr = 1, cel = 7 ; //no. of base stations, users and cells (assuming 1bst per cell)
 int usrno = 0 ; //simulation for interference to be calculate for this user number_temporary 
 vec EbN0dB, EbN0, N0, noise_variance, bit_error_rate; //vec is a vector containing double
 bvec transmitted_bits, received_bits, rxbits; //bvec is a vector containing bits
@@ -20,7 +20,7 @@ std::complex<double> received_symbols[10][5][10][5000], rxnoise_symbols[10][5][1
 std::complex<double> interference[5000];
 float beta[7][1][7];
 AWGN_Channel awgn_channel;     //The AWGN channel class
-
+std::complex<double> Lsfade[7][1][7][10000];
 vector<vector<int> > si;
 int si_inv =  1;
 
@@ -71,7 +71,8 @@ void Betav(void)
 			for(int cl = 0 ; cl <7; cl++)
 			{	
 				D = sqrt((pow((base_loc[i][0]-user_loc[cl][0]),2)) + (pow((base_loc[i][1]-user_loc[cl][1]),2)));
-				beta[i][j][cl] = pow((4*3.14*D*3),2) ; //friis					 
+				//beta[i][j][cl] = pow((4*3.14*D*3),2) ; ; //friis	
+				beta[0][0][0] = 1;				 
 			}
 		}
 	}
@@ -80,6 +81,7 @@ void Betav(void)
    	n = 4*3.14*D*3 ; //friis
 	n = pow(n, 2);	
 	vector < vector < vector<int> > > Beta; */
+return ;
 }
 
 void Lsfadev(void)
@@ -118,7 +120,7 @@ void Lsfadev(void)
 		//Set the noise variance of the AWGN channel:
 		awgn_channel.set_noise(N0(m));		
 	
-		std::complex<double> Lsfade[7][1][7][10000];
+		
 		for(int p = 0; p < bst; p++)
 		{
 			for(int q = 0; q < usr; q++)
@@ -128,7 +130,8 @@ void Lsfadev(void)
 					// vec c1buff = randn(No_of_bits) ;
 					cbuff = randn_c(No_of_bits);
 					for(int b=0; b < No_of_bits; b++)
-					{	//std::complex<double> mycomplex (c1buff[b],c1buff[b]);
+					{	
+						//std::complex<double> mycomplex (c1buff[b],c1buff[b]);
 						//mycomplex = mycomplex*1/sqrt(2);
 						Lsfade[p][q][r][b] = cbuff[b];					 
 					}
@@ -148,43 +151,42 @@ void Lsfadev(void)
 				for (int q = 0; q < usr; q++) //for every user
 				{				
 					buff.clear() ;
-
 					for (int b = 0; b < transmitted_symbols.size(); b++)
 					{
-						received_symbols[r][q][p][b] += sqrt(power1*beta[r][0][0])*Lsfade[r][0][0][b]*w[r][b]*transmitted_symbols[b];
+						received_symbols[r][q][p][b] = Lsfade[r][0][0][b]*transmitted_symbols[b];
 						//cout<<"Lsfade[" <<p<< "][" << q << "][" << r << "][" << b << "] = " << rxnoise_symbols[6][q][r][b] << endl; 
 					}						
-				//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << Lsfade[p][q][r][b] << endl; 					
+					//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << Lsfade[p][q][r][b] << endl;	
 				}
 			}							
 
-				for(int r = 0 ; r < 7 ; r++)
+			for(int r = 0 ; r < 7 ; r++)
+			{
+				for(int q = 0 ; q < 1 ; q++)
 				{
-					for(int q = 0 ; q < 1 ; q++)
+					for (int b = 0; b < transmitted_symbols.size(); b++)
 					{
-						for (int b = 0; b < transmitted_symbols.size(); b++)
-						{
-							rx[0][0][b] += received_symbols[r][q][p][b] ;
-						}
+						rx[0][0][b] += received_symbols[r][q][p][b] ;
 					}
-				}	
-		
-				for (int b = 0; b < transmitted_symbols.size(); b++)
-					buff[b] = rx[0][0][b];
-
-				//Run the transmited symbols through the channel using the () operator for adding white noise:
-				noise = awgn_channel(buff);	
-				
-				for (int b = 0; b < transmitted_symbols.size(); b++)
-				{
-					//rxnoise_symbols[p][q][r][b] = noise[b]/Lsfade[p][q][r][b]; //zero forcing
-					rx[0][0][b] = noise[b]; 
-					cnoise[b] = noise[b];						
-					//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << rxnoise_symbols[p][q][r][b] << endl;
 				}
-				//cout<<received_bits<<endl ;
+			}	
+	
+			for (int b = 0; b < transmitted_symbols.size(); b++)
+				buff[b] = rx[0][0][b];
 
-				noise.clear() ;
+			//Run the transmited symbols through the channel using the () operator for adding white noise:
+			noise = awgn_channel(buff);	
+			
+			for (int b = 0; b < transmitted_symbols.size(); b++)
+			{
+				//rxnoise_symbols[p][q][r][b] = noise[b]/Lsfade[p][q][r][b]; //zero forcing
+				rx[0][0][b] = noise[b]; 
+				cnoise[b] = noise[b] ;						
+				//cout << "Lsfade[" << p << "][" << q << "][" << r << "][" << b << "] = " << rxnoise_symbols[p][q][r][b] << endl;
+			}
+			//cout<<received_bits<<endl ;
+
+			noise.clear() ;
 		
 //------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
@@ -266,6 +268,8 @@ return;
 }
 */
 
+
+//-------------------------------------------------------------------uplink----------------------------------------------------------------------------------------//
 void uplink(complex<double> Lsfade[7][1][7][10000])
 {
 	
@@ -296,8 +300,8 @@ void uplink(complex<double> Lsfade[7][1][7][10000])
 			{
 				for(int y = 0 ; y < 1 ; y++)
 				{
-					pil_out[x][d] += sqrt((beta[x][y][z])*power)*Lsfade[x][y][z][d]*si[x][y]; //to be edited			
-					}			
+					pil_out[x][d] += sqrt((beta[x][y][z])*power)*Lsfade[x][y][z][d]; //to be edited			
+				}			
 				}			
 			}
 	
@@ -348,6 +352,7 @@ sinr_d = sinr_d/buf_d ;
 
 }
 
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
 int main(void)
 {	
